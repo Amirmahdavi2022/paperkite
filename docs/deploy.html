@@ -36,6 +36,7 @@
 <section>
   <h2>1. connect</h2>
   <button id="connect">Connect wallet</button>
+  <button id="switchNet">Switch to Polygon</button>
   <div id="connectStatus" class="status"></div>
 </section>
 
@@ -50,8 +51,8 @@
   <label>Renderer address</label>
   <input id="rendererAddr" placeholder="0x...">
   <label>Payout / owner address</label>
-  <input id="payoutAddr" value="0xc3491296a9093F09aD7f0db0B394457262150af8">
-  <label>Price per mint (ETH)</label>
+  <input id="payoutAddr" placeholder="fills in automatically when you connect">
+  <label>Price per mint (in the network own coin)</label>
   <input id="priceEth" value="0.001">
   <label>Max supply</label>
   <input id="maxSupply" value="512">
@@ -63,7 +64,7 @@
   <h2>4. mint one to yourself</h2>
   <label>NFT contract address</label>
   <input id="mintAddr" placeholder="0x...">
-  <label>Price per mint (ETH)</label>
+  <label>Price per mint (in the network own coin)</label>
   <input id="mintPriceEth" value="0.001">
   <button id="mintBtn" disabled>Mint</button>
   <div id="mintStatus" class="status"></div>
@@ -94,27 +95,85 @@ function setStatus(id, text, cls) {
   el.className = 'status' + (cls ? ' ' + cls : '');
 }
 
+const CHAIN_NAMES = { 1n: 'ethereum mainnet', 137n: 'polygon', 8453n: 'base', 84532n: 'base sepolia', 80002n: 'polygon amoy' };
+
+async function refreshConnection() {
+  signer = await provider.getSigner();
+  const addr = await signer.getAddress();
+  const net = await provider.getNetwork();
+  const chainName = CHAIN_NAMES[net.chainId] || ('chain ' + net.chainId);
+  document.getElementById('network').textContent = 'connected: ' + addr.slice(0,6) + '\u2026' + addr.slice(-4) + '  \u00b7  ' + chainName;
+  document.getElementById('payoutAddr').value = addr;
+  setStatus('connectStatus', 'connected as ' + addr + '\non ' + chainName + '\npayout field set to this address', 'ok');
+  document.getElementById('deployRenderer').disabled = false;
+  document.getElementById('deployNft').disabled = false;
+  document.getElementById('mintBtn').disabled = false;
+  document.getElementById('checkBtn').disabled = false;
+}
+
 document.getElementById('connect').onclick = async () => {
   if (!window.ethereum) {
-    setStatus('connectStatus', 'No wallet found. Open this page inside your wallet app\'s own browser (MetaMask or Rainbow), not your regular browser.', 'err');
+    setStatus('connectStatus', 'No wallet found. Open this page inside your wallet app own browser.', 'err');
     return;
   }
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
+    try {
+      await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+    } catch (permErr) {
+      // some wallets do not support this, fall through to a plain request
+    }
     await provider.send('eth_requestAccounts', []);
-    signer = await provider.getSigner();
-    const addr = await signer.getAddress();
-    const net = await provider.getNetwork();
-    document.getElementById('network').textContent = 'connected: ' + addr.slice(0,6) + '…' + addr.slice(-4) + '  ·  chain ' + net.chainId + ' (' + (net.name || 'unknown') + ')';
-    setStatus('connectStatus', 'connected', 'ok');
-    document.getElementById('deployRenderer').disabled = false;
-    document.getElementById('deployNft').disabled = false;
-    document.getElementById('mintBtn').disabled = false;
-    document.getElementById('checkBtn').disabled = false;
+    await refreshConnection();
   } catch (e) {
     setStatus('connectStatus', 'failed: ' + (e.message || e), 'err');
   }
 };
+
+document.getElementById('switchNet').onclick = async () => {
+  if (!window.ethereum) { setStatus('connectStatus', 'no wallet found', 'err'); return; }
+  setStatus('connectStatus', 'confirm the network switch in your wallet', 'pending');
+  try {
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x89' }] });
+  } catch (e) {
+    if (e.code === 4902) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x89',
+            chainName: 'Polygon',
+            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+            rpcUrls: ['https://polygon-rpc.com'],
+            blockExplorerUrls: ['https://polygonscan.com']
+          }]
+        });
+      } catch (addErr) {
+        setStatus('connectStatus', 'could not add Polygon: ' + (addErr.message || addErr), 'err');
+        return;
+      }
+    } else {
+      setStatus('connectStatus', 'switch failed: ' + (e.message || e), 'err');
+      return;
+    }
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await refreshConnection();
+  } catch (e) {
+    setStatus('connectStatus', 'switched, but could not read the account: ' + (e.message || e), 'err');
+  }
+};
+
+if (window.ethereum && window.ethereum.on) {
+  window.ethereum.on('accountsChanged', async () => {
+    if (provider) { try { await refreshConnection(); } catch (e) {} }
+  });
+  window.ethereum.on('chainChanged', async () => {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    try { await refreshConnection(); } catch (e) {}
+  });
+}
 
 document.getElementById('deployRenderer').onclick = async () => {
   setStatus('rendererStatus', 'confirm in your wallet…', 'pending');
