@@ -7,59 +7,35 @@ Nobody but you can do this part. Deploying means signing a transaction with your
 - A wallet app with a built-in browser (MetaMask mobile or Rainbow both work).
 - A little Base Sepolia test ETH, free from a faucet. Search "Base Sepolia faucet" or use the Coinbase developer faucet from inside your wallet's browser.
 
-## Step 1 — open Remix
+## Step 1 — open the deploy page
 
-Inside your wallet app's browser (not your regular browser — it needs to inject the wallet), go to:
+Remix does not support mobile, so this repo carries its own single-page deploy tool instead: `tools/deploy.html`. Open it inside your wallet app's own in-app browser (MetaMask or Rainbow), not your regular browser — it needs to see your wallet.
 
-```
-remix.ethereum.org
-```
+You can open it straight from GitHub (raw file), or from the copy shared in chat.
 
-## Step 2 — bring in the four files
+## Step 2 — pick your network first
 
-In Remix's file explorer, create a `contracts` folder and add these four files from this repo, in this order:
+Before touching the page, open your wallet app and switch to Base Sepolia. The deploy page shows whatever network your wallet is on right at the top, once connected — check it matches before confirming anything.
 
-```
-contracts/Base64.sol
-contracts/ERC721Min.sol
-contracts/Paperkite.sol
-contracts/PaperkiteNFT.sol
-```
+## Step 3 — connect
 
-Easiest way on a phone: open each file on GitHub, copy the raw content, paste into a new file in Remix with the same name.
+Tap Connect wallet. Your wallet will ask you to approve the connection. Once connected, the top bar shows your address and the chain you're on.
 
-## Step 3 — compile
+## Step 4 — deploy the renderer
 
-Open the compiler tab (the second icon down). Set the compiler version to `0.8.26`. Under Advanced Configurations, turn on `viaIR`. Hit Compile PaperkiteNFT.sol — it pulls in the other three automatically.
+Tap Deploy Paperkite renderer, confirm in your wallet, and wait — it fills in its own address once mined.
 
-## Step 4 — connect your wallet
+## Step 5 — deploy the collection
 
-Open the Deploy tab (the third icon). Under Environment, choose "Injected Provider". Your wallet will ask you to confirm the connection. Make sure the network shown is Base Sepolia — switch to it inside your wallet first if not.
+The renderer address is already filled in. Your payout address is pre-filled too. Set a price (in ETH) and a max supply, then tap Deploy PaperkiteNFT and confirm.
 
-## Step 5 — deploy the renderer
+## Step 6 — mint one to yourself
 
-In the contract dropdown, pick `Paperkite`. Hit Deploy. Confirm in your wallet. Once it's mined, copy the deployed address — Remix shows it under "Deployed Contracts".
+The contract address carries over automatically. Tap Mint and confirm — this sends the price as value, exactly like a real buyer would.
 
-## Step 6 — deploy the NFT contract
+## Step 7 — check it actually worked
 
-Pick `PaperkiteNFT` from the dropdown. Fill in the constructor fields:
-
-- `rendererAddress` — the address from step 5
-- `payoutAddress` — your own wallet address, `0xc3491296a9093F09aD7f0db0B394457262150af8`
-- `initialPrice` — a wei amount, e.g. `1000000000000000` for 0.001 ETH
-- `maxSupply_` — how many can ever be minted, e.g. `512`
-
-Hit Deploy, confirm in your wallet.
-
-## Step 7 — mint one to yourself
-
-Under "Deployed Contracts", expand PaperkiteNFT. Find `mint`, put the same value as `initialPrice` in the "VALUE" field at the top of the Deploy panel (in wei), and call it. Confirm in your wallet.
-
-## Step 8 — check it actually worked
-
-Copy the contract address into a Base Sepolia block explorer, open the "Read Contract" tab, call `tokenURI` with `1`. Copy what it returns and paste it into `tools/decode-tokenuri.html` from this repo — open that file straight from your phone's browser, no server needed. It should show a JSON block and the painting itself.
-
-If that painting matches what you see in the gallery for seed 1, everything is wired correctly end to end.
+Tap Show token in the last section. It reads tokenURI straight from the contract, decodes it in your browser, and shows the actual painting. If it matches what you see in the gallery for the same seed, everything is wired correctly end to end.
 
 ## Only after that
 
