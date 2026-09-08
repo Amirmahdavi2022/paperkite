@@ -1,0 +1,15 @@
+{
+  "name": "paperkite",
+  "version": "0.1.0",
+  "description": "Layered paper landscapes drawn on chain by a Solidity renderer",
+  "license": "MIT",
+  "scripts": {
+    "test": "node test/parity.js",
+    "gallery": "node scripts/gallery.js"
+  },
+  "dependencies": {
+    "@ethereumjs/evm": "3.1.1",
+    "ethers": "6.13.4",
+    "solc": "0.8.26"
+  }
+}
