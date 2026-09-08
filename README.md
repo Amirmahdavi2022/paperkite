@@ -29,19 +29,33 @@ That check runs on every push. It caught a real bug on the first run, a single m
 
 ```
 npm install
-npm test          # compiles the contract, runs it in a local EVM, diffs against the reference
+npm test          # parity check, then the full NFT behaviour suite against a local EVM
 npm run gallery   # writes docs/index.html from actual contract output
 ```
 
 The gallery page is not a preview or a mockup. Every scene on it came out of the EVM.
 
+## The NFT layer
+
+`PaperkiteNFT.sol` is a small hand-written ERC-721 (no external framework) plus ERC-2981 royalties. Minting calls the renderer contract live and uses the token id as the seed, so token #7 is always exactly the world you see at seed 7 in the gallery. Payment on mint goes straight to the owner's wallet in the same transaction — nothing sits in the contract waiting to be withdrawn.
+
+`test/nft.js` runs this against a real local EVM with funded test accounts: wrong payment reverts, correct payment moves the exact price to the payout address, `tokenURI` is decoded and checked byte for byte against the renderer's own output, sold-out reverts once `maxSupply` is hit, only the owner can change price, royalty math is checked, and transfers work.
+
+Deploying is the one step that has to happen from your own wallet, since it means signing with a key nobody but you should hold. See `docs/DEPLOY.md` for the phone-only walkthrough, and `tools/decode-tokenuri.html` for a no-server way to check what a deployed token actually returns.
+
 ## Layout
 
 ```
-contracts/Paperkite.sol   the renderer that lives on chain
-src/engine.js             the reference renderer, same algorithm in JS
-test/parity.js            compiles, executes, compares byte for byte
-scripts/gallery.js        builds the gallery from contract output
+contracts/Paperkite.sol      the renderer that lives on chain
+contracts/Base64.sol         base64 encoder used by tokenURI
+contracts/ERC721Min.sol      minimal hand-written ERC-721
+contracts/PaperkiteNFT.sol   the mintable collection
+src/engine.js                the reference renderer, same algorithm in JS
+test/parity.js               compiles the renderer, runs it in a local EVM, compares byte for byte
+test/nft.js                  mints, pays, transfers, and checks tokenURI against a real EVM
+scripts/gallery.js           builds the gallery from contract output
+docs/DEPLOY.md                phone-only deployment walkthrough
+tools/decode-tokenuri.html   paste a tokenURI, see the decoded JSON and image
 ```
 
 ## Licence
