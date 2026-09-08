@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paperkite — tokenURI decoder</title>
+<style>
+  body { margin: 0; background: #b8b6ae; color: #23221f; font: 15px/1.5 -apple-system, sans-serif; padding: 22px 16px 60px; }
+  h1 { font: 300 30px/1 Georgia, serif; margin: 0 0 6px; }
+  p.sub { margin: 0 0 18px; color: #4a4842; max-width: 46ch; }
+  textarea { width: 100%; height: 110px; padding: 10px; font: 13px monospace; box-sizing: border-box; border: 1px solid #57554f; background: #fff; }
+  button { margin-top: 10px; font: inherit; font-size: 14px; padding: 10px 18px; border: 1px solid #57554f; background: transparent; cursor: pointer; }
+  button:hover { background: #a5a39b; }
+  #out { margin-top: 20px; }
+  #meta { background: #f7f5f0; padding: 12px; font: 12px/1.5 monospace; white-space: pre-wrap; word-break: break-all; }
+  #img { max-width: 420px; margin-top: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.2); }
+  .err { color: #a3302a; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>tokenURI decoder</h1>
+<p class="sub">Paste whatever a block explorer's tokenURI read call returns. This runs entirely in your browser — nothing is sent anywhere.</p>
+<textarea id="in" placeholder="data:application/json;base64,..."></textarea><br>
+<button id="go">Decode</button>
+<div id="out"></div>
+
+<script>
+document.getElementById('go').onclick = () => {
+  const out = document.getElementById('out');
+  out.innerHTML = '';
+  let raw = document.getElementById('in').value.trim();
+  raw = raw.replace(/^"+|"+$/g, '');
+  try {
+    if (!raw.startsWith('data:application/json;base64,')) throw new Error('does not start with data:application/json;base64,');
+    const json = JSON.parse(atob(raw.split(',')[1]));
+    const meta = document.createElement('div');
+    meta.id = 'meta';
+    meta.textContent = JSON.stringify({ name: json.name, description: json.description, attributes: json.attributes }, null, 2);
+    out.appendChild(meta);
+    if (json.image && json.image.startsWith('data:image/svg+xml;base64,')) {
+      const img = document.createElement('img');
+      img.id = 'img';
+      img.src = json.image;
+      out.appendChild(img);
+    }
+  } catch (e) {
+    const err = document.createElement('div');
+    err.className = 'err';
+    err.textContent = 'Could not decode: ' + e.message;
+    out.appendChild(err);
+  }
+};
+</script>
+</body>
+</html>
